@@ -24,33 +24,33 @@ const char* ACCESS_SECRET = "ACCESS SECRET"; //ACCESS SECRET GERADA NA PLATAFORM
 const char* ID_DISPOSITIVO = "DEVICE ID"; //ID DO DISPOSITIVO GERADO NA PLATAFORMA
 const char* TOPICO_PUBLICACAO = "wnology/DEVICE ID/state"; //FORMATO PADRÃO DE TÓPICO PARA PLATAFROMA WEGNOLOGY wnology/DEVICE_ID/state
 const int PORTA_MQTT = 1883;  //PORTA DE COMUNICAÇÃO COM O SERVIDOR
-const int INTERVALO = 300000; //INTERVALO DE ENVIO DAS MENSAGENS PARA A PLATAFORMA
+const int INTERVALO = 30000; //INTERVALO DE ENVIO DAS MENSAGENS PARA A PLATAFORMA
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+WiFiClient cursoIoT;
+PubSubClient client(cursoIoT);
 
-//VERIÁVEIS 
-long tempoAnterior;
-char ATRIBUTOS [200];
-int x=0;
+//VARIÁVEIS 
+long tempoAnterior; // Armazena o tempo da última publicação 
+char ATRIBUTOS [200]; // Array para armazenar o payload JSON
+int x=0; // Variável auxiliar (não utilizada no código)
 
 //FUNÇÃO DE INICIALIZAÇÃO
 void setup() 
 {
   Serial.begin(115200); //INICIALIZAÇÃO MONITOR SERIAL
   
-  conexao_wifi();
-  conexao_broker();
+  conexao_wifi(); // Chama a função para conectar WiFi
+  conexao_broker(); // Chama a função para conectar ao broker MQTT
 }
 
-//FUNÇÃO DE CONEXÃO COM o WIFI
+//FUNÇÃO DE CONEXÃO COM O WIFI
 void conexao_wifi()
 {
   WiFi.begin(REDE_WIFI, SENHA_WIFI);    //INICIALIZAÇÃO CONEXÃO COM WIFI
   while (WiFi.status() != WL_CONNECTED) //AGUARDANDO CONEXÃO COM WIFI
   {
     delay(500);
-    Serial.println("Conectando ao Wi-Fi...");
+    Serial.println("Conectando ao Wi-Fi..."); 
   }
   Serial.println("Conectado à rede Wi-Fi"); //CONFIRMAÇÃO DE CONEXÃO COM WIFI
 }
@@ -61,7 +61,7 @@ void conexao_broker()
   client.setServer(BROKER, PORTA_MQTT); //INICIALIZAÇÃO CONEXÃO COM O SERVIDOR MQTT
   while (!client.connected()) //AGUARDANDO CONEXÃO COM O SERVIDOR MQTT
   {
-    Serial.println("   Conectando ao servidor MQTT...");
+    Serial.println("Conectando ao servidor MQTT...");
     conexao_mqtt();    
   }
 }
@@ -69,13 +69,13 @@ void conexao_broker()
 //FUNÇÃO DE CONEXÃO COM A PLATAFORMA WEGNOLOGY
 void conexao_mqtt()
 {
-  if (client.connect(ID_DISPOSITIVO, ACCESS_KEY, ACCESS_SECRET )) //CONFIRMAÇÃO 
+  if (client.connect(ID_DISPOSITIVO, ACCESS_KEY, ACCESS_SECRET)) //CONFIRMAÇÃO 
   {
     Serial.println("Conectado à plataforma WEGNOLOGY");
   } 
   else 
   {
-    Serial.print("   Falha na conexão à plataforma WEGNOLOGY ");
+    Serial.print("Falha na conexão à plataforma WEGNOLOGY");
     Serial.print(client.state());
     delay(2000);
   }
@@ -84,7 +84,7 @@ void conexao_mqtt()
 //FUNÇÃO DE ESTRUTURA DO PAYLOAD NO FORMATO JSON
 void data_atributos()
 {
-  int a = 1;        //TESTE DE VALOR BOOLEANO (1=TRUE 0=FALSE)   
+  int a = 0;        //TESTE DE VALOR BOOLEANO (1=TRUE 0=FALSE)   
   int b = 5;        //TESTE DE VALOR INTEIRO      
   float c = 1.234;  //TESTE DE VALOR REAL
   String d = "OK";  //TESTE DE STRING (TEXTO)
@@ -140,7 +140,7 @@ void data_atributos()
 //FUNÇÃO QUE FAZ A PUBLICAÇÃO DO PAYLOAD
 void escreveDados()
 { 
-  if (client.connect(ID_DISPOSITIVO, ACCESS_KEY, ACCESS_SECRET )) //VERIFICA A CONEXÃO COM A PLATAFORMA
+  if (client.connect(ID_DISPOSITIVO, ACCESS_KEY, ACCESS_SECRET)) //VERIFICA A CONEXÃO COM A PLATAFORMA
   {    
     client.publish(TOPICO_PUBLICACAO,ATRIBUTOS);//ENVIA O PAYLOAD NO TÓPICO DE PUBLICAÇÃO ("wnology/DEVICE_ID/state",payload)
   }
