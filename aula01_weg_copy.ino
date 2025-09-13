@@ -6,150 +6,140 @@
  * DESENVOLVIDO POR: PROF.LUIZ HENRIQUE RAMOS 
 */
 
-//INCLUSÃO DE BIBLIOTECAS
+// INCLUSÃO DE BIBLIOTECAS
 #include <ArduinoJson.h>
 #include <WiFiS3.h>
 #include <PubSubClient.h>
 
+// DEFINIÇÃO DAS CONFIGURAÇÕES DE COMUNICAÇÃO
+// CONEXÃO COM INTERNET 
+const char* REDE_WIFI = "automacao"; // REDE
+const char* SENHA_WIFI = "Sen@i791"; // SENHA
 
-//DEFINIÇÃO DAS CONFIGURAÇÕES DE COMUNICAÇÃO
-//CONEXÃO COM INTERNET 
-const char* REDE_WIFI = "automacao";  //REDE
-const char* SENHA_WIFI =  "Sen@i791";      //SENHA 
+const int btnPin = 8; // Pino do botão
 
-//CONEXÃO COM O BROKER MQTT E PLATAFORMA WEGNOLOGY
-const char* BROKER = "broker.app.wnology.io"; //BROKER MQTT 
-const char* ACCESS_KEY = "3912dd58-4056-4521-8054-b29533e04852";  //ACCESS KEY GERADA NA PLATAFORMA WEGNOLOGY
-const char* ACCESS_SECRET = "4c6a64609465fd11bc1ae82ca3d5b1803ba433d854f261e2c9ee319923a1ad5c"; //ACCESS SECRET GERADA NA PLATAFORMA WEGNOLOGY
-const char* ID_DISPOSITIVO = "68c59e76cadd796e6852ead4"; //ID DO DISPOSITIVO GERADO NA PLATAFORMA
-const char* TOPICO_PUBLICACAO = "wnology/68c59e76cadd796e6852ead4/state"; //FORMATO PADRÃO DE TÓPICO PARA PLATAFROMA WEGNOLOGY wnology/DEVICE_ID/state
-const int PORTA_MQTT = 1883;  //PORTA DE COMUNICAÇÃO COM O SERVIDOR
-const int INTERVALO = 3000; //INTERVALO DE ENVIO DAS MENSAGENS PARA A PLATAFORMA
+// CONEXÃO COM O BROKER MQTT E PLATAFORMA WEGNOLOGY
+const char* BROKER = "broker.app.wnology.io"; 
+const char* ACCESS_KEY = "3912dd58-4056-4521-8054-b29533e04852";
+const char* ACCESS_SECRET = "4c6a64609465fd11bc1ae82ca3d5b1803ba433d854f261e2c9ee319923a1ad5c";
+const char* ID_DISPOSITIVO = "68c59e76cadd796e6852ead4";
+const char* TOPICO_PUBLICACAO = "wnology/68c59e76cadd796e6852ead4/state"; 
+const int PORTA_MQTT = 1883;  
+const int INTERVALO = 3000; // intervalo de envio
 
 WiFiClient cursoIoT;
 PubSubClient client(cursoIoT);
 
-//VARIÁVEIS 
-long tempoAnterior; // Armazena o tempo da última publicação 
-char ATRIBUTOS [200]; // Array para armazenar o payload JSON
-int x=0; // Variável auxiliar (não utilizada no código)
+// VARIÁVEIS 
+long tempoAnterior; 
+char ATRIBUTOS[200]; 
 
-//FUNÇÃO DE INICIALIZAÇÃO
+// FUNÇÃO DE INICIALIZAÇÃO
 void setup() 
 {
-  Serial.begin(115200); //INICIALIZAÇÃO MONITOR SERIAL
+  pinMode(btnPin, INPUT_PULLUP);
+  Serial.begin(115200);
   
-  conexao_wifi(); // Chama a função para conectar WiFi
-  conexao_broker(); // Chama a função para conectar ao broker MQTT
+  conexao_wifi();
+  conexao_broker();
 }
 
-//FUNÇÃO DE CONEXÃO COM O WIFI
+// FUNÇÃO DE CONEXÃO COM O WIFI
 void conexao_wifi()
 {
-  WiFi.begin(REDE_WIFI, SENHA_WIFI);    //INICIALIZAÇÃO CONEXÃO COM WIFI
-  while (WiFi.status() != WL_CONNECTED) //AGUARDANDO CONEXÃO COM WIFI
+  WiFi.begin(REDE_WIFI, SENHA_WIFI);
+  while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    Serial.println("Conectando ao Wi-Fi..."); 
+    Serial.println("Conectando ao Wi-Fi...");
   }
-  Serial.println("Conectado à rede Wi-Fi"); //CONFIRMAÇÃO DE CONEXÃO COM WIFI
+  Serial.println("Conectado à rede Wi-Fi");
 }
 
-//FUNÇÃO DE CONEXÃO COM O BROKER MQTT
+// FUNÇÃO DE CONEXÃO COM O BROKER MQTT
 void conexao_broker()
 {
-  client.setServer(BROKER, PORTA_MQTT); //INICIALIZAÇÃO CONEXÃO COM O SERVIDOR MQTT
-  while (!client.connected()) //AGUARDANDO CONEXÃO COM O SERVIDOR MQTT
+  client.setServer(BROKER, PORTA_MQTT);
+  while (!client.connected())
   {
     Serial.println("Conectando ao servidor MQTT...");
-    conexao_mqtt();    
+    conexao_mqtt();
   }
 }
 
-//FUNÇÃO DE CONEXÃO COM A PLATAFORMA WEGNOLOGY
+// FUNÇÃO DE CONEXÃO COM A PLATAFORMA WEGNOLOGY
 void conexao_mqtt()
 {
-  if (client.connect(ID_DISPOSITIVO, ACCESS_KEY, ACCESS_SECRET)) //CONFIRMAÇÃO 
+  if (client.connect(ID_DISPOSITIVO, ACCESS_KEY, ACCESS_SECRET)) 
   {
     Serial.println("Conectado à plataforma WEGNOLOGY");
   } 
   else 
   {
-    Serial.print("Falha na conexão à plataforma WEGNOLOGY");
-    Serial.print(client.state());
+    Serial.print("Falha na conexão à plataforma WEGNOLOGY, erro: ");
+    Serial.println(client.state());
     delay(2000);
   }
 }
 
-//FUNÇÃO DE ESTRUTURA DO PAYLOAD NO FORMATO JSON
+// FUNÇÃO DE ESTRUTURA DO PAYLOAD NO FORMATO JSON
 void data_atributos()
 {
-  int a = random(0,1);        //TESTE DE VALOR BOOLEANO (1=TRUE 0=FALSE)   
-  int b = random(40,60);        //TESTE DE VALOR INTEIRO      
-  float c = 1.234;  //TESTE DE VALOR REAL
-  String d = "OK";  //TESTE DE STRING (TEXTO)
-             
-  //CONVERTE OS VALORES SALVOS NAS VARIÁVEIS EM STRING
+  int estadoBtn = digitalRead(btnPin); // Lê botão
+  int a = random(0,1);       
+  int b = random(40,60);      
+  float c = 1.234;  
+  String d = "OK";  
+
   String TESTE1 = String(a);
   String TESTE2 = String(b); 
   String TESTE3 = String(c);
   String TESTE4 = String(d);
- 
-  //CRIA PAYLOAD JSON PARA ENVIAR AO SERVIDOR MQTT
-  String payload = "{";      //início da mensagem
-  payload += "\"data\":";    //"data" local para armazenar os dados na plataforma wegnology
-  payload += "{";            //início da lista de itens a serem armazenados no local "data"
-  payload += "\"TESTE1\":";  //Primeiro atributo "TESTE1":                       
-  payload += TESTE1;         //Variável que armazena o valor que será atribuído ao atributo
-  payload += ",";            //separação de atributos
-  payload += "\"TESTE2\":";  //Segundo atributo "TESTE2":
-  payload += TESTE2;         //Variável que armazena o valor que será atribuído ao atributo
-  payload += ",";            //separação de atributos
-  payload += "\"TESTE3\":";  //Terceiro atributo "TESTE3":
-  payload += TESTE3;         //Variável que armazena o valor que será atribuído ao atributo
-  payload += ",";            //separação de atributos
-  payload += "\"TESTE4\":";  //Quarto atributo "TESTE4": 
-  payload += "\"";           //Envio do caracter " (aspas) para iniciar o envio de uma string
-  payload += TESTE4;         //Variável que armazena o valor que será atribuído ao atributo  
-  payload += "\"";           //Envio do caracter " (aspas) para finalizar o envio de uma string
-  payload += "}";            //Finalização dos itens dentro do local "data"
-  payload += "}";            //Finalização do payload
+  String BOTAO = (estadoBtn == LOW) ? "1" : "0"; // 1=pressionado, 0=solto
 
-  /*FORMATO DA MENSAGEM JSON
-  {
-    data:
-    {
-      "TESTE1" : 1
-      "TESTE2" : 5
-      "TESTE3" : 1.234
-      "TESTE4" : "OK"
-    }
-  }
- */
+  String payload = "{";
+  payload += "\"data\":{";
+  payload += "\"TESTE1\":" + TESTE1 + ",";
+  payload += "\"TESTE2\":" + TESTE2 + ",";
+  payload += "\"TESTE3\":" + TESTE3 + ",";
+  payload += "\"TESTE4\":\"" + TESTE4 + "\",";
+  payload += "\"BOTAO\":" + BOTAO;  
+  payload += "}}";
 
-  Serial.println(payload); //ESCRITA DO PAYLOAD NO MONITOR SERIAL
+  Serial.println(payload);
  
-  //CRIA UMA ARRAY DE CARACTERES E PUBLICA EM PARES DE "NOME" : VALOR NO SERVIDOR
-  payload.toCharArray(ATRIBUTOS, 200); //CARREGA O PAYLOAD NA ARRAY ATRIBUTOS            
+  payload.toCharArray(ATRIBUTOS, 200);            
+
   if (millis() - tempoAnterior > INTERVALO) 
   {
-    escreveDados(); //CHAMA A FUNÇÃO PARA FAZER A PUBLICAÇÃO DOS DADOS   
-    tempoAnterior = millis(); //AGUARDA O INTERVALO DE ENVIO DE MENSAGENS
-  }
-}
-//FUNÇÃO QUE FAZ A PUBLICAÇÃO DO PAYLOAD
-void escreveDados()
-{ 
-  if (client.connect(ID_DISPOSITIVO, ACCESS_KEY, ACCESS_SECRET)) //VERIFICA A CONEXÃO COM A PLATAFORMA
-  {    
-    client.publish(TOPICO_PUBLICACAO,ATRIBUTOS);//ENVIA O PAYLOAD NO TÓPICO DE PUBLICAÇÃO ("wnology/DEVICE_ID/state",payload)
+    escreveDados();   
+    tempoAnterior = millis(); 
   }
 }
 
-//FUNÇÃO PRINCIPAL DE EXECUÇÃO 
+// FUNÇÃO QUE FAZ A PUBLICAÇÃO DO PAYLOAD
+void escreveDados()
+{ 
+  if (client.connected()) 
+  {    
+    client.publish(TOPICO_PUBLICACAO, ATRIBUTOS);
+  }
+}
+
+// FUNÇÃO PRINCIPAL DE EXECUÇÃO 
 void loop() 
 {
-  if (!client.connected()) //VERIFICA FALHA NA CONEXAO COM A PLATAFORMA
+  int estadoBtn = digitalRead(btnPin);
+
+  if (estadoBtn == LOW) {
+    Serial.println("Botão pressionado!");
+  } else {
+    Serial.println("Botão solto.");
+  }
+
+  delay(200);
+
+  if (!client.connected()) 
   {
     Serial.println("Reconectando a plataforma Wegnology");
     conexao_mqtt();
@@ -164,5 +154,5 @@ void loop()
   client.loop();
   Serial.println("-------------");
   data_atributos();
-  delay(10000);
+  delay(1000);
 }
